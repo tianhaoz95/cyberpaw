@@ -65,8 +65,12 @@ PYINSTALLER_ARGS=(
   --hidden-import json
   --hidden-import re
   --hidden-import psutil
-  # Collect the entire llama_cpp package including its native libs
+  --hidden-import httpx
+  --hidden-import playwright
+  # Collect the entire llama_cpp, playwright and httpx packages
   --collect-all llama_cpp
+  --collect-all playwright
+  --collect-all httpx
 )
 
 # If we found the llama_cpp lib dir, add all dylib/so files explicitly too

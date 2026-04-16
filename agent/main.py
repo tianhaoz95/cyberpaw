@@ -136,14 +136,23 @@ async def _install_browsers() -> None:
     """Run playwright install chromium, emitting progress."""
     emit({"type": "model_progress", "stage": "loading", "pct": 0, "text": "Installing Chromium..."})
     try:
-        # Use the playwright CLI programmatically
-        from playwright.cli.main import main as pw_main
-        # playwright install chromium
-        # Note: pw_main expects a list of args and might call sys.exit,
-        # so we run it in a thread or subprocess to be safe.
+        # Note: In a PyInstaller bundle, we can't easily use sys.executable -m
+        # but we can try to call playwright.cli.main directly in a thread.
+        # However, it uses synchronous blocking calls.
+        # The most reliable way in a bundle is to use the 'playwright' module entry point.
         import subprocess
+        
+        # Heuristic: if we are in a bundle, use the same executable
+        # If not, use sys.executable
+        executable = sys.executable
+        
+        # In the bundle, playwright CLI might be accessible via -m playwright
+        # but only if correctly collected.
+        
+        cmd = [executable, "-m", "playwright", "install", "chromium"]
+        
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "playwright", "install", "chromium",
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
