@@ -52,6 +52,11 @@ export default function App() {
 
     // Small delay so Terminal has mounted and writeToTerminal.current is set.
     setTimeout(() => {
+      // Restore last-used workspace before loading the model
+      if (config.working_directory && config.working_directory !== "~") {
+        setWorkingDirectory(config.working_directory);
+      }
+
       if (config.model_path) {
         const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let i = 0;
@@ -87,6 +92,7 @@ export default function App() {
           const selected = await open({ directory: true, multiple: false });
           if (typeof selected === "string") {
             setWorkingDirectory(selected);
+            updateConfig({ working_directory: selected });
           }
         }}
         onNewSession={resetSession}

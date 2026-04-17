@@ -9,6 +9,7 @@ import type { AgentPhase, ModelStatus } from "../hooks/useAgent";
 interface Props {
   agentPhase: AgentPhase;
   modelStatus: ModelStatus;
+  workingDirectory?: string;
   onOpenFolder: () => void;
   onNewSession: () => void;
   onOpenSettings: () => void;
@@ -32,6 +33,11 @@ function handleDragStart(e: React.MouseEvent) {
   if (target.closest("button")) return;
   e.preventDefault();
   getCurrentWindow().startDragging().catch(() => {});
+}
+
+function shortenPath(p: string): string {
+  const parts = p.replace(/\\/g, "/").split("/").filter(Boolean);
+  return parts.length > 2 ? "…/" + parts.slice(-2).join("/") : p;
 }
 
 export default function MenuBar({
@@ -103,6 +109,26 @@ export default function MenuBar({
         </svg>
         New
       </MenuButton>
+
+      {/* Current workspace indicator */}
+      {typeof workingDirectory === "string" && workingDirectory !== "~" && (
+        <span
+          title={workingDirectory}
+          style={{
+            fontSize: 11,
+            color: "#888888",
+            fontFamily: "monospace",
+            maxWidth: 200,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            cursor: "default",
+            marginLeft: 8,
+          }}
+        >
+          {shortenPath(workingDirectory)}
+        </span>
+      )}
 
       <div style={{ flex: 1 }} />
 
