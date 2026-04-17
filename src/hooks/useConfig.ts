@@ -18,7 +18,6 @@ export interface AppConfig {
   model_path: string;
   context_size: number;
   max_new_tokens: number;
-  temperature: number;
   permission_mode: "ask" | "auto_read" | "auto_all";
   system_prompt_append: string;
   network_enabled: boolean;
@@ -29,7 +28,6 @@ const DEFAULT_CONFIG: AppConfig = {
   model_path: "",
   context_size: 8192,
   max_new_tokens: 2048,
-  temperature: 0.2,
   permission_mode: "ask",
   system_prompt_append: "",
   network_enabled: false,

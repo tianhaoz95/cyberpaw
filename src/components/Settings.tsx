@@ -189,18 +189,7 @@ export default function Settings({
           />
         </Field>
 
-        {/* Temperature */}
-        <Field label={`Temperature: ${draft.temperature.toFixed(2)}`}>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={draft.temperature}
-            onChange={(e) => set("temperature", Number(e.target.value))}
-            style={{ width: "100%", accentColor: "#ff2d98" }}
-          />
-        </Field>
+
 
         {/* Network Access */}
         <Field label="Network Access">

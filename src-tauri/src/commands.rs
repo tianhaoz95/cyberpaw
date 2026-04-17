@@ -11,7 +11,6 @@ pub struct AppConfig {
     pub model_path: String,
     pub context_size: u32,
     pub max_new_tokens: u32,
-    pub temperature: f32,
     pub permission_mode: String, // "ask" | "auto_read" | "auto_all"
     pub system_prompt_append: String,
     pub network_enabled: bool,
@@ -27,7 +26,6 @@ impl Default for AppConfig {
             model_path: String::new(),
             context_size: 8192,
             max_new_tokens: 2048,
-            temperature: 0.2,
             permission_mode: "ask".into(),
             system_prompt_append: String::new(),
             network_enabled: false,

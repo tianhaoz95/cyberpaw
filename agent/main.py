@@ -83,7 +83,7 @@ async def _run_shell(command: str, working_directory: str) -> None:
         emit({"type": "shell_done", "exit_code": 1})
 
 
-async def _load_model(backend, path: str) -> None:
+async def _load_model(backend, path: str, orchestrator=None) -> None:
     """Load model at *path* into *backend*, emitting progress events.
 
     Runs a heartbeat task in parallel that emits a pulse every second so
@@ -121,6 +121,26 @@ async def _load_model(backend, path: str) -> None:
 
     try:
         await backend.load(path, _on_progress)
+        # Determine temperature based on model filename and set orchestrator param if present
+        try:
+            import os as _os
+            _basename = _os.path.basename(path).lower()
+            if "gemma" in _basename:
+                _chosen_temp = 1.0
+            elif "qwen" in _basename:
+                _chosen_temp = 0.7
+            else:
+                _chosen_temp = 1.0
+            if orchestrator is not None:
+                try:
+                    orchestrator._params.temperature = float(_chosen_temp)
+                    emit({"type": "system", "text": f"Set model temperature to {_chosen_temp}"})
+                    log.info("Set temperature to %s for model %s", _chosen_temp, path)
+                except Exception:
+                    log.exception("Failed to set orchestrator temperature")
+        except Exception:
+            log.exception("Failed to determine model temperature")
+
         emit({"type": "model_progress", "stage": "ready", "pct": 100})
         emit({"type": "model_status", "backend": backend.name, "loaded": True})
         log.info("Model loaded: %s", path)
@@ -216,7 +236,6 @@ async def main() -> None:
     model_path = os.environ.get("CYBERPAW_MODEL_PATH", "")
     context_size = 8192
     max_new_tokens = 2048
-    temperature = 0.2
     permission_mode = PermissionMode.ASK
     system_prompt_append = ""
     network_enabled = False  # opt-in; user must enable in Settings
@@ -274,12 +293,32 @@ async def main() -> None:
         emit_fn=emit,
         generate_params=GenerateParams(
             max_new_tokens=max_new_tokens,
-            temperature=temperature,
         ),
         context_size=context_size,
         session_id=session_id,
         network_enabled=network_enabled,
     )
+
+    # If a model was already loaded before the orchestrator existed (startup),
+    # set the orchestrator's temperature according to the model filename.
+    try:
+        if backend.is_loaded() and model_path:
+            import os as _os
+            _basename = _os.path.basename(model_path).lower()
+            if "gemma" in _basename:
+                _chosen_temp = 1.0
+            elif "qwen" in _basename:
+                _chosen_temp = 0.7
+            else:
+                _chosen_temp = 1.0
+            try:
+                orchestrator._params.temperature = float(_chosen_temp)
+                emit({"type": "system", "text": f"Set model temperature to {_chosen_temp}"})
+                log.info("Set temperature to %s for model %s", _chosen_temp, model_path)
+            except Exception:
+                log.exception("Failed to set orchestrator temperature at startup")
+    except Exception:
+        log.exception("Error while setting startup model temperature")
 
     emit({"type": "status", "phase": "idle"})
 
@@ -403,7 +442,7 @@ async def main() -> None:
                 orchestrator._backend = backend
                 agent_tool._backend = backend
             
-            asyncio.create_task(_load_model(backend, model_path))
+            asyncio.create_task(_load_model(backend, model_path, orchestrator))
 
         elif msg_type == "download_catalog":
             from downloader import get_catalog
@@ -448,9 +487,6 @@ def _apply_config_patch(patch: dict, orchestrator) -> None:
             orchestrator._permission_mode = PermissionMode(patch["permission_mode"])
         except ValueError:
             pass
-
-    if "temperature" in patch:
-        orchestrator._params.temperature = float(patch["temperature"])
 
     if "max_new_tokens" in patch:
         try:
