@@ -36,7 +36,6 @@ async def run_subagent(
     emit_fn: Callable[[dict], None],
     depth: int,
     label: str,
-    system_prompt_append: str = "",
 ) -> str:
     """
     Run a sub-agent to completion and return its final text response.
@@ -76,7 +75,6 @@ async def run_subagent(
 
     system_prompt = build_system_prompt(
         working_directory=working_directory,
-        append=system_prompt_append,
     )
 
     # Remove the Agent tool from the sub-registry to prevent infinite nesting

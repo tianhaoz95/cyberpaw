@@ -237,7 +237,6 @@ async def main() -> None:
     context_size = 8192
     max_new_tokens = 2048
     permission_mode = PermissionMode.ASK
-    system_prompt_append = ""
     network_enabled = False  # opt-in; user must enable in Settings
 
     # ── Backend + model ───────────────────────────────────────────────────────
@@ -282,7 +281,6 @@ async def main() -> None:
     # ── Orchestrator ──────────────────────────────────────────────────────────
     system_prompt = build_system_prompt(
         working_directory=working_directory,
-        append=system_prompt_append,
     )
     orchestrator = Orchestrator(
         backend=backend,
@@ -493,13 +491,6 @@ def _apply_config_patch(patch: dict, orchestrator) -> None:
             orchestrator._params.max_new_tokens = int(patch["max_new_tokens"])
         except (ValueError, TypeError):
             pass
-
-    if "system_prompt_append" in patch:
-        from prompt.system_prompt import build_system_prompt
-        orchestrator._system_prompt = build_system_prompt(
-            working_directory=orchestrator._working_directory,
-            append=patch["system_prompt_append"],
-        )
 
     if "network_enabled" in patch:
         orchestrator._network_enabled = bool(patch["network_enabled"])

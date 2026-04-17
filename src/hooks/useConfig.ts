@@ -19,7 +19,7 @@ export interface AppConfig {
   context_size: number;
   max_new_tokens: number;
   permission_mode: "ask" | "auto_read" | "auto_all";
-  system_prompt_append: string;
+
   network_enabled: boolean;
 }
 
@@ -29,7 +29,7 @@ const DEFAULT_CONFIG: AppConfig = {
   context_size: 8192,
   max_new_tokens: 2048,
   permission_mode: "ask",
-  system_prompt_append: "",
+
   network_enabled: false,
 };
 

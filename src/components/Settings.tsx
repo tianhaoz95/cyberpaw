@@ -209,18 +209,6 @@ export default function Settings({
 
 
 
-        {/* System Prompt Append */}
-
-        <Field label="Additional System Prompt">
-          <textarea
-            value={draft.system_prompt_append}
-            onChange={(e) => set("system_prompt_append", e.target.value)}
-            placeholder="Appended to the default system prompt…"
-            rows={4}
-            style={{ ...inputStyle, resize: "vertical", fontFamily: "monospace" }}
-          />
-        </Field>
-
         {/* Save / Cancel */}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={btnStyle}>Cancel</button>
