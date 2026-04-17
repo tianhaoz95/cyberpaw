@@ -13,6 +13,17 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { MutableRefObject, useEffect, useRef } from "react";
 
+function _replaceInput(
+  term: XTerm,
+  bufRef: MutableRefObject<string>,
+  newText: string,
+) {
+  // Erase current input and write the replacement
+  const erase = "\b \b".repeat(bufRef.current.length);
+  term.write(erase + newText);
+  bufRef.current = newText;
+}
+
 interface Props {
   onInput: (text: string) => void;
   onInterrupt: () => void;
@@ -27,12 +38,17 @@ export default function Terminal({ onInput, onInterrupt, modelLoaded, writeToTer
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
-  const inputBufferRef = useRef<string>("");
+  const inputBufferRef = useRef<string>(""");
+  const historyRef = useRef<string[]>([]);
+  const historyIdxRef = useRef<number>(-1);
+  const savedInputRef = useRef<string>("");
   const modelLoadedRef = useRef(modelLoaded);
   // Keep ref in sync with prop so the onData closure always sees current value.
   useEffect(() => { modelLoadedRef.current = modelLoaded; }, [modelLoaded]);
 
   useEffect(() => {
+    try { historyRef.current = JSON.parse(sessionStorage.getItem('cyberpaw_history') ?? '[]'); } catch {}
+
     const term = new XTerm({
       fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", monospace',
       fontSize: 14,
@@ -127,6 +143,14 @@ export default function Terminal({ onInput, onInterrupt, modelLoaded, writeToTer
           term.writeln("\x1b[2mNo model loaded — open Settings to load one.\x1b[0m");
           term.write(PROMPT);
         } else if (line.trim()) {
+          // Push to history and persist
+          try {
+            historyRef.current.push(line);
+            if (historyRef.current.length > 200) historyRef.current.shift();
+            sessionStorage.setItem("cyberpaw_history", JSON.stringify(historyRef.current));
+          } catch {}
+          historyIdxRef.current = -1;
+          savedInputRef.current = "";
           onInput(line);
         } else {
           term.write(PROMPT);
@@ -142,6 +166,33 @@ export default function Terminal({ onInput, onInterrupt, modelLoaded, writeToTer
         if (inputBufferRef.current.length > 0) {
           inputBufferRef.current = inputBufferRef.current.slice(0, -1);
           term.write("\b \b");
+        }
+      } else if (data === "\x1b[A") {
+        // ↑  — go back in history
+        const hist = historyRef.current;
+        if (hist.length === 0) return;
+
+        if (historyIdxRef.current === -1) {
+          // First press: save current draft
+          savedInputRef.current = inputBufferRef.current;
+          historyIdxRef.current = hist.length - 1;
+        } else if (historyIdxRef.current > 0) {
+          historyIdxRef.current -= 1;
+        }
+        _replaceInput(term, inputBufferRef, hist[historyIdxRef.current]);
+
+      } else if (data === "\x1b[B") {
+        // ↓  — go forward in history
+        const hist = historyRef.current;
+        if (historyIdxRef.current === -1) return;
+
+        if (historyIdxRef.current < hist.length - 1) {
+          historyIdxRef.current += 1;
+          _replaceInput(term, inputBufferRef, hist[historyIdxRef.current]);
+        } else {
+          // Past the end: restore the draft
+          historyIdxRef.current = -1;
+          _replaceInput(term, inputBufferRef, savedInputRef.current);
         }
       } else if (code >= 32) {
         // Printable character
