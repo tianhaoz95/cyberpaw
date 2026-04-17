@@ -66,7 +66,7 @@ export default function App() {
           // \r moves to start of line, rewrite in place
           writeTerminal(`\r${P}${frames[i]}${R} Loading ${modelName}…`);
         }, 80);
-        loadModel(config.model_path, config.backend);
+        loadModel(config.model_path);
       } else {
         writeTerminal(
           "\x1b[2mNo model loaded — open Settings to load one.\x1b[0m\r\n"
@@ -107,7 +107,7 @@ export default function App() {
             updateConfig(patch);
             // If model_path changed, trigger a load immediately
             if (patch.model_path && patch.model_path !== config.model_path) {
-              loadModel(patch.model_path, patch.backend);
+              loadModel(patch.model_path);
             }
             setSettingsOpen(false);
           }}
@@ -118,11 +118,10 @@ export default function App() {
           onFetchCatalog={fetchCatalog}
           onStartDownload={startDownload}
           onCancelDownload={cancelDownload}
-          onLoadModel={(path, backend) => {
-            updateConfig({ model_path: path, ...(backend ? { backend: backend as AppConfig["backend"] } : {}) });
-            loadModel(path, backend);
+          onLoadModel={(path) => {
+            updateConfig({ model_path: path });
+            loadModel(path);
           }}
-          onInstallBrowser={installBrowser}
         />
       )}
 

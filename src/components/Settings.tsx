@@ -19,8 +19,7 @@ interface Props {
   onFetchCatalog: () => void;
   onStartDownload: (modelId: string, destDir?: string, hfToken?: string) => void;
   onCancelDownload: () => void;
-  onLoadModel: (modelPath: string, backend?: string) => void;
-  onInstallBrowser: () => void;
+  onLoadModel: (modelPath: string) => void;
 }
 
 export default function Settings({
@@ -34,7 +33,6 @@ export default function Settings({
   onStartDownload,
   onCancelDownload,
   onLoadModel,
-  onInstallBrowser,
 }: Props) {
   const [draft, setDraft] = useState<AppConfig>({ ...config });
   const [showDownloader, setShowDownloader] = useState(!config.model_path);
@@ -209,25 +207,7 @@ export default function Settings({
           </span>
         </Field>
 
-        {/* Browser Engine */}
-        <Field label="Browser Engine (Playwright)">
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button
-              onClick={onInstallBrowser}
-              style={{
-                ...btnStyle,
-                color: "#00ffff",
-                borderColor: "#00ffff44",
-                boxShadow: "0 0 5px #00ffff22",
-              }}
-            >
-              Install Browser Engine (Chromium)
-            </button>
-          </div>
-          <span style={{ color: "#00ffff", fontSize: 11, opacity: 0.8 }}>
-            Required for browser interaction tools. Downloads ~100MB of binaries.
-          </span>
-        </Field>
+
 
         {/* System Prompt Append */}
 
