@@ -156,6 +156,8 @@ export interface ModelStatus {
   backend: string;
   loaded: boolean;
   vramUsedMb: number;
+  modelSizeMb: number;
+  kvCacheMb: number;
 }
 
 export interface PendingPermission {
@@ -189,6 +191,8 @@ export function useAgent() {
     backend: "unknown",
     loaded: false,
     vramUsedMb: 0,
+    modelSizeMb: 0,
+    kvCacheMb: 0,
   });
   const [pendingPermission, setPendingPermission] =
     useState<PendingPermission | null>(null);
@@ -280,6 +284,8 @@ export function useAgent() {
           backend: (msg.backend as string) ?? "unknown",
           loaded: (msg.loaded as boolean) ?? false,
           vramUsedMb: (msg.vram_used_mb as number) ?? 0,
+          modelSizeMb: (msg.model_size_mb as number) ?? 0,
+          kvCacheMb: (msg.kv_cache_mb as number) ?? 0,
         });
       } else if (type === "sidecar_exit") {
         write(`\r\n\x1b[31mAgent process exited (code ${msg.code}).\x1b[0m\r\n`);
@@ -323,6 +329,17 @@ export function useAgent() {
       unlisten.then((fn) => fn());
     };
   }, [write]);
+
+  // Poll model status periodically when a model is loaded so the UI can
+  // display memory usage updates. Starts when modelStatus.loaded becomes true
+  // and stops when it becomes false or the component unmounts.
+  useEffect(() => {
+    if (!modelStatus.loaded) return;
+    const id = setInterval(() => {
+      invoke("get_model_status").catch(() => {});
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [modelStatus.loaded]);
 
   // ── Commands ────────────────────────────────────────────────────────────────
 

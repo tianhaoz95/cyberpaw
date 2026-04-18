@@ -99,7 +99,6 @@ export default function Terminal({ onInput, onInterrupt, modelLoaded, writeToTer
 
     // ── Welcome banner ────────────────────────────────────────────────────────
     const P  = "\x1b[38;2;0;255;255m";   // cyber cyan
-    const V  = "\x1b[38;2;187;0;255m";    // violet
     const W  = "\x1b[38;2;255;255;255m";  // white
     const DM = "\x1b[2m";                 // dim
     const R  = "\x1b[0m";                 // reset

@@ -5,7 +5,7 @@ import Settings from "./components/Settings";
 import PermissionDialog from "./components/PermissionDialog";
 import ModelLoadProgress from "./components/ModelLoadProgress";
 import { useAgent } from "./hooks/useAgent";
-import { type AppConfig, useConfig } from "./hooks/useConfig";
+import { useConfig } from "./hooks/useConfig";
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -26,7 +26,6 @@ export default function App() {
     fetchCatalog,
     startDownload,
     cancelDownload,
-    installBrowser,
     downloadProgress,
     downloadedModelPath,
     modelCatalog,

@@ -40,9 +40,16 @@ function shortenPath(p: string): string {
   return parts.length > 2 ? "…/" + parts.slice(-2).join("/") : p;
 }
 
+function formatMb(n: number) {
+  if (!n || n <= 0) return "0 MB";
+  if (n >= 1024) return `${(n/1024).toFixed(1)} GB`;
+  return `${Math.round(n)} MB`;
+}
+
 export default function MenuBar({
   agentPhase,
   modelStatus,
+  workingDirectory,
   onOpenFolder,
   onNewSession,
   onOpenSettings,
@@ -160,6 +167,35 @@ export default function MenuBar({
       >
         {modelStatus.loaded ? modelStatus.backend : "no model"}
       </span>
+
+      {/* Memory badge (weights | kv | total) */}
+      {modelStatus.loaded && (
+        <span
+          title={`Detailed breakdown: \n- Weights: ${modelStatus.modelSizeMb} MiB\n- KV Cache: ${modelStatus.kvCacheMb} MiB\n- Total RSS: ${modelStatus.vramUsedMb} MiB`}
+          style={{
+            fontSize: 11,
+            background: "#0a000a",
+            color: "#cc88ff",
+            border: "1px solid #cc88ff44",
+            borderRadius: 10,
+            padding: "1px 8px",
+            fontFamily: "monospace",
+            cursor: "default",
+            marginLeft: 8,
+            display: "flex",
+            gap: 6,
+          }}
+        >
+          <span style={{ opacity: 0.8 }}>W:</span>
+          <span>{modelStatus.modelSizeMb > 0 ? formatMb(modelStatus.modelSizeMb) : "..."}</span>
+          <span style={{ color: "#cc88ff44" }}>|</span>
+          <span style={{ opacity: 0.8 }}>KV:</span>
+          <span>{modelStatus.kvCacheMb > 0 ? formatMb(modelStatus.kvCacheMb) : "..."}</span>
+          <span style={{ color: "#cc88ff44" }}>|</span>
+          <span style={{ opacity: 0.8 }}>Σ</span>
+          <span>{modelStatus.vramUsedMb > 0 ? formatMb(modelStatus.vramUsedMb) : "..."}</span>
+        </span>
+      )}
 
       <MenuButton onClick={onOpenSettings} title="Settings">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ verticalAlign: "middle" }}>

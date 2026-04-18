@@ -27,7 +27,7 @@ Output message types (to Tauri → WebView):
   {"type": "system",             "text": "..."}
   {"type": "error",              "message": "..."}
   {"type": "model_progress",     "stage": "loading"|"ready", "pct": int}
-  {"type": "model_status",       "backend": "...", "loaded": bool}
+  {"type": "model_status",       "backend": "...", "loaded": bool, "vram_used_mb": int, "model_size_mb": int, "kv_cache_mb": int}
   {"type": "download_catalog",   "models": [...]}
   {"type": "download_progress",  "model_id": "...", "pct": int, "downloaded_mb": float,
                                  "total_mb": float|null, "speed_mbps": float}
@@ -98,7 +98,18 @@ async def _load_model(backend, path: str, orchestrator=None) -> None:
         backend.unload()
 
     emit({"type": "model_progress", "stage": "loading", "pct": 0})
-    emit({"type": "model_status", "backend": backend.name, "loaded": False})
+    try:
+        breakdown = getattr(backend, "memory_breakdown_mb", lambda: {})()
+    except Exception:
+        breakdown = {}
+    emit({
+        "type": "model_status",
+        "backend": backend.name,
+        "loaded": False,
+        "vram_used_mb": breakdown.get("total_mb", 0),
+        "model_size_mb": breakdown.get("model_mb", 0),
+        "kv_cache_mb": breakdown.get("kv_mb", 0),
+    })
 
     last_pct = [0]
 
@@ -142,7 +153,18 @@ async def _load_model(backend, path: str, orchestrator=None) -> None:
             log.exception("Failed to determine model temperature")
 
         emit({"type": "model_progress", "stage": "ready", "pct": 100})
-        emit({"type": "model_status", "backend": backend.name, "loaded": True})
+        try:
+            breakdown = getattr(backend, "memory_breakdown_mb", lambda: {})()
+        except Exception:
+            breakdown = {}
+        emit({
+            "type": "model_status",
+            "backend": backend.name,
+            "loaded": True,
+            "vram_used_mb": breakdown.get("total_mb", 0),
+            "model_size_mb": breakdown.get("model_mb", 0),
+            "kv_cache_mb": breakdown.get("kv_mb", 0),
+        })
         log.info("Model loaded: %s", path)
     except Exception as exc:
         emit({"type": "error", "message": f"Model load failed: {exc}"})
@@ -241,7 +263,19 @@ async def main() -> None:
 
     # ── Backend + model ───────────────────────────────────────────────────────
     backend = select_backend(backend_kind, n_ctx=context_size, model_path=model_path)
-    emit({"type": "model_status", "backend": backend.name, "loaded": False})
+    # Include memory breakdown if backend supports it
+    try:
+        breakdown = getattr(backend, "memory_breakdown_mb", lambda: {})()
+    except Exception:
+        breakdown = {}
+    emit({
+        "type": "model_status",
+        "backend": backend.name,
+        "loaded": False,
+        "vram_used_mb": breakdown.get("total_mb", 0),
+        "model_size_mb": breakdown.get("model_mb", 0),
+        "kv_cache_mb": breakdown.get("kv_mb", 0),
+    })
 
     if model_path:
         await _load_model(backend, model_path)
@@ -406,11 +440,17 @@ async def main() -> None:
                     pass
 
         elif msg_type == "status_request":
+            try:
+                breakdown = getattr(backend, "memory_breakdown_mb", lambda: {})()
+            except Exception:
+                breakdown = {}
             emit({
                 "type": "model_status",
                 "backend": backend.name,
                 "loaded": backend.is_loaded(),
-                "vram_used_mb": backend.vram_used_mb(),
+                "vram_used_mb": breakdown.get("total_mb", backend.vram_used_mb() if hasattr(backend, "vram_used_mb") else 0),
+                "model_size_mb": breakdown.get("model_mb", 0),
+                "kv_cache_mb": breakdown.get("kv_mb", 0),
             })
 
         elif msg_type == "load_model":

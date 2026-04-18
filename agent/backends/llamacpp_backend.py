@@ -20,6 +20,8 @@ import asyncio
 import ctypes
 import logging
 import threading
+import os
+import subprocess
 from typing import AsyncIterator, Callable
 
 from .base import GenerateParams, LLMBackend
@@ -165,3 +167,58 @@ class LlamaCppBackend(LLMBackend):
 
     def context_size(self) -> int:
         return self._n_ctx
+
+    # ── Memory reporting ─────────────────────────────────────────────────────
+
+    def memory_breakdown_mb(self) -> dict:
+        """Return a dict with model_mb, kv_mb, total_mb (all in MiB)."""
+        if self._llm is None:
+            return {"model_mb": 0, "kv_mb": 0, "total_mb": 0}
+        
+        model_mb = 0
+        kv_mb = 0
+        
+        try:
+            import llama_cpp.llama_cpp as lib
+            # Direct access to the raw pointers from llama-cpp-python
+            model_ptr = self._llm.model
+            ctx_ptr = self._llm.ctx
+            
+            if model_ptr:
+                model_bytes = lib.llama_model_size(model_ptr)
+                model_mb = int(model_bytes // (1024 * 1024))
+            
+            if ctx_ptr:
+                kv_bytes = lib.llama_state_get_size(ctx_ptr)
+                kv_mb = int(kv_bytes // (1024 * 1024))
+        except Exception as e:
+            log.error("C API memory probe failed: %s", e)
+
+        # Per Task 3, total_mb should be the sum of weights and KV cache.
+        # This ensures the UI badge (W | KV | Σ) is mathematically consistent.
+        total_mb = model_mb + kv_mb
+        
+        # Fallback to psutil RSS ONLY if the C API failed to return any data,
+        # otherwise we prefer the sum for consistency in the UI.
+        if total_mb == 0:
+            try:
+                import psutil
+                rss = psutil.Process().memory_info().rss
+                total_mb = int(rss // (1024 * 1024))
+            except Exception:
+                if total_mb == 0:
+                    try:
+                        import subprocess
+                        out = subprocess.check_output(["ps", "-o", "rss=", "-p", str(os.getpid())], text=True)
+                        total_mb = int(int(out.strip()) // 1024)
+                    except Exception:
+                        pass
+
+        return {
+            "model_mb": model_mb,
+            "kv_mb": kv_mb,
+            "total_mb": total_mb
+        }
+
+    def vram_used_mb(self) -> int:
+        return self.memory_breakdown_mb()["total_mb"]
