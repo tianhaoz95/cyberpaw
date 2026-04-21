@@ -6,6 +6,8 @@ import os
 import shutil
 
 from harness.tool_registry import Tool, ToolContext, ToolResult
+from .file_staleness import clear_staleness
+from .file_utils import suggest_paths, format_suggestions
 
 
 class DeleteFileTool(Tool):
@@ -39,21 +41,25 @@ class DeleteFileTool(Tool):
         path = _resolve(raw, ctx.working_directory)
 
         if not os.path.exists(path):
-            return ToolResult.error(f"Path not found: {path}")
+            suggestions = suggest_paths(raw, ctx.working_directory)
+            return ToolResult.error(f"Path not found: {path}{format_suggestions(suggestions)}")
 
         try:
             if os.path.isfile(path) or os.path.islink(path):
                 os.remove(path)
+                clear_staleness(ctx.session_id, path)
                 summary = f"Deleted file {os.path.basename(path)}"
                 return ToolResult.ok(f"Deleted {path}", summary)
 
             if os.path.isdir(path):
                 if recursive:
                     shutil.rmtree(path)
+                    clear_staleness(ctx.session_id, path)
                     summary = f"Deleted directory {os.path.basename(path)} (recursive)"
                     return ToolResult.ok(f"Deleted directory {path} recursively", summary)
                 else:
                     os.rmdir(path)  # raises OSError if not empty
+                    clear_staleness(ctx.session_id, path)
                     summary = f"Deleted directory {os.path.basename(path)}"
                     return ToolResult.ok(f"Deleted directory {path}", summary)
 

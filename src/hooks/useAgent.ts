@@ -160,6 +160,11 @@ export interface ModelStatus {
   kvCacheMb: number;
 }
 
+export interface GenerationStats {
+  totalTokens: number;
+  tokensPerSec: number;
+}
+
 export interface PendingPermission {
   id: string;
   tool: string;
@@ -203,6 +208,10 @@ export function useAgent() {
     useState<DownloadProgress | null>(null);
   const [downloadedModelPath, setDownloadedModelPath] = useState<string | null>(null);
   const [modelCatalog, setModelCatalog] = useState<ModelCatalogEntry[]>([]);
+  const [generationStats, setGenerationStats] = useState<GenerationStats>({
+    totalTokens: 0,
+    tokensPerSec: 0,
+  });
 
   // Ref to the terminal's write function — set by Terminal via callback
   const writeToTerminalRef = useRef<((text: string) => void) | null>(null);
@@ -260,7 +269,7 @@ export function useAgent() {
           return phase;
         });
       } else if (type === "system") {
-        write(`\x1b[38;2;220;130;220m${msg.text}\x1b[0m\r\n`);
+        write(`\x1b[2K\r\x1b[38;2;220;130;220m${msg.text}\x1b[0m\r\n`);
       } else if (type === "error") {
         write(`\r\n\x1b[38;2;255;80;80mError: ${msg.message}\x1b[0m\r\n`);
         write("\x1b[38;2;255;45;152m❯\x1b[0m ");
@@ -287,6 +296,11 @@ export function useAgent() {
           modelSizeMb: (msg.model_size_mb as number) ?? 0,
           kvCacheMb: (msg.kv_cache_mb as number) ?? 0,
         });
+      } else if (type === "generation_stats") {
+        setGenerationStats((prev) => ({
+          totalTokens: prev.totalTokens + ((msg.tokens as number) ?? 0),
+          tokensPerSec: (msg.tokens_per_sec as number) ?? 0,
+        }));
       } else if (type === "sidecar_exit") {
         write(`\r\n\x1b[31mAgent process exited (code ${msg.code}).\x1b[0m\r\n`);
         setAgentPhase("idle");
@@ -376,6 +390,7 @@ export function useAgent() {
     write("\x1b[2J\x1b[H"); // clear screen
     write("\x1b[32mCyberPaw\x1b[0m — session reset.\r\n\r\n");
     write("\x1b[32m❯\x1b[0m ");
+    setGenerationStats({ totalTokens: 0, tokensPerSec: 0 });
   }, [write]);
 
   const setWorkingDirectory = useCallback(async (path: string) => {
@@ -444,6 +459,7 @@ export function useAgent() {
     pendingPermission,
     resolvePermission,
     modelStatus,
+    generationStats,
     agentPhase,
     loadProgress,
     writeToTerminal: writeToTerminalRef,

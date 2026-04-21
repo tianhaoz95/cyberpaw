@@ -73,9 +73,7 @@ async def run_subagent(
         event["agent_label"] = label
         emit_fn(event)
 
-    system_prompt = build_system_prompt(
-        working_directory=working_directory,
-    )
+    system_prompt = build_system_prompt()
 
     # Remove the Agent tool from the sub-registry to prevent infinite nesting
     from .tool_registry import ToolRegistry

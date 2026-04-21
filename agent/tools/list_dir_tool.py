@@ -6,6 +6,7 @@ import os
 import stat
 
 from harness.tool_registry import Tool, ToolContext, ToolResult
+from .file_utils import suggest_paths, format_suggestions
 
 MAX_ENTRIES = 300
 
@@ -36,7 +37,8 @@ class ListDirTool(Tool):
         path = _resolve(raw, ctx.working_directory)
 
         if not os.path.isdir(path):
-            return ToolResult.error(f"Not a directory: {path}")
+            suggestions = suggest_paths(input.get("path", ""), ctx.working_directory, folders_only=True)
+            return ToolResult.error(f"Not a directory: {path}{format_suggestions(suggestions)}")
 
         try:
             entries = sorted(os.scandir(path), key=lambda e: (not e.is_dir(), e.name.lower()))

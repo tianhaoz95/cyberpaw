@@ -15,6 +15,7 @@ Strategy (mirrors claude-code's /compact command logic):
 from __future__ import annotations
 
 import logging
+from typing import Callable
 
 from .message import Message, ToolResultBlock, TextBlock
 
@@ -25,13 +26,36 @@ KEEP_RECENT_TURNS = 6         # keep last N user+assistant message pairs
 MAX_TOOL_RESULT_CHARS = 4000  # truncate individual tool results beyond this
 
 
-def estimate_tokens(messages: list[Message]) -> int:
-    """Rough token count: total characters ÷ 4."""
+def estimate_tokens(
+    messages: list[Message],
+    count_tokens_fn: Callable[[str], int] | None = None,
+) -> int:
+    """
+    Estimate token count of *messages*.
+    Uses *count_tokens_fn* if provided, otherwise falls back to
+    the characters-÷-4 heuristic.
+    """
+    if count_tokens_fn:
+        # For efficiency, we join text content and count once, but messages
+        # also have metadata (roles, tags) that gemma_template adds.
+        # A perfectly accurate count would require rendering the full prompt,
+        # but that's expensive. This is a "good enough" middle ground.
+        total = 0
+        for m in messages:
+            total += count_tokens_fn(m.text_content())
+            # Add a small constant for role tags (<start_of_turn>user\n)
+            total += 10
+        return total
+
     return sum(m.char_count() for m in messages) // 4
 
 
-def should_compact(messages: list[Message], context_size: int) -> bool:
-    used = estimate_tokens(messages)
+def should_compact(
+    messages: list[Message],
+    context_size: int,
+    count_tokens_fn: Callable[[str], int] | None = None,
+) -> bool:
+    used = estimate_tokens(messages, count_tokens_fn)
     threshold = int(context_size * COMPACTION_THRESHOLD)
     return used > threshold
 

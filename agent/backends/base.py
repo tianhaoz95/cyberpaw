@@ -22,6 +22,7 @@ class GenerateParams:
     repetition_penalty: float = 1.1
     stop_sequences: list[str] = field(default_factory=lambda: [
         "<end_of_turn>",
+        "</start_of_turn>",  # Gemma sometimes generates this instead of <end_of_turn>
     ])
 
 
@@ -93,6 +94,31 @@ class LLMBackend(abc.ABC):
 
         This is an *async generator* — callers use ``async for token in ...``.
         """
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Return the number of tokens in *text* for this model's tokenizer.
+        Default implementation uses a simple character-÷-4 heuristic.
+        """
+        return len(text) // 4
+
+    def chat_template(self) -> str | None:
+        """Return the Jinja2 chat template string embedded in the model, or None."""
+        return None
+
+    def eos_strings(self) -> list[str]:
+        """
+        Return the EOS/stop strings for this model derived from its vocabulary.
+        An empty list means the caller should use its own defaults.
+        """
+        return []
+
+    async def prime_cache(self, system_prefix: str) -> None:
+        """
+        Warm the KV cache with the stable system prompt prefix.
+        Default implementation does nothing.
+        """
+        pass
 
     # ── Diagnostics ───────────────────────────────────────────────────────────
 

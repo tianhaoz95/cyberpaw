@@ -6,6 +6,8 @@ import os
 import shutil
 
 from harness.tool_registry import Tool, ToolContext, ToolResult
+from .file_staleness import clear_staleness
+from .file_utils import suggest_paths, format_suggestions
 
 
 class MoveTool(Tool):
@@ -35,7 +37,8 @@ class MoveTool(Tool):
         dst = _resolve(input["destination"], ctx.working_directory)
 
         if not os.path.exists(src):
-            return ToolResult.error(f"Source not found: {src}")
+            suggestions = suggest_paths(input["source"], ctx.working_directory)
+            return ToolResult.error(f"Source not found: {src}{format_suggestions(suggestions)}")
 
         dst_parent = os.path.dirname(dst)
         if dst_parent and not os.path.isdir(dst_parent):
@@ -45,6 +48,8 @@ class MoveTool(Tool):
 
         try:
             shutil.move(src, dst)
+            clear_staleness(ctx.session_id, src)
+            clear_staleness(ctx.session_id, dst)
         except OSError as e:
             return ToolResult.error(str(e))
 

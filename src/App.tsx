@@ -18,6 +18,7 @@ export default function App() {
     pendingPermission,
     resolvePermission,
     modelStatus,
+    generationStats,
     agentPhase,
     writeToTerminal,
     writeTerminal,
@@ -86,6 +87,7 @@ export default function App() {
       <MenuBar
         agentPhase={agentPhase}
         modelStatus={modelStatus}
+        generationStats={generationStats}
         onOpenFolder={async () => {
           const { open } = await import("@tauri-apps/plugin-dialog");
           const selected = await open({ directory: true, multiple: false });

@@ -6,6 +6,7 @@ import fnmatch
 import os
 
 from harness.tool_registry import Tool, ToolContext, ToolResult
+from .file_utils import suggest_paths, format_suggestions
 
 MAX_RESULTS = 500
 
@@ -43,7 +44,8 @@ class GlobTool(Tool):
         base = _resolve(base, ctx.working_directory)
 
         if not os.path.isdir(base):
-            return ToolResult.error(f"Directory not found: {base}")
+            suggestions = suggest_paths(input.get("path", ""), ctx.working_directory, folders_only=True)
+            return ToolResult.error(f"Directory not found: {base}{format_suggestions(suggestions)}")
 
         search = os.path.join(base, pattern)
         try:

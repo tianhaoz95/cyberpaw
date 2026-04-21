@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 
 from harness.tool_registry import Tool, ToolContext, ToolResult
+from .file_staleness import record_read
+from .file_utils import suggest_paths, format_suggestions
 
 
 class ReadTool(Tool):
@@ -43,7 +45,10 @@ class ReadTool(Tool):
         path = _resolve(raw_path, ctx.working_directory)
 
         if not os.path.isfile(path):
-            return ToolResult.error(f"File not found: {path}")
+            suggestions = suggest_paths(raw_path, ctx.working_directory)
+            return ToolResult.error(f"File not found: {path}{format_suggestions(suggestions)}")
+
+        record_read(ctx.session_id, path)
 
         try:
             with open(path, "r", encoding="utf-8", errors="replace") as f:

@@ -83,6 +83,14 @@ async def _run_shell(command: str, working_directory: str) -> None:
         emit({"type": "shell_done", "exit_code": 1})
 
 
+def _model_temperature(path: str) -> float:
+    """Return the recommended sampling temperature for the model at *path*."""
+    name = os.path.basename(path).lower()
+    if "qwen" in name:
+        return 0.7
+    return 1.0
+
+
 async def _load_model(backend, path: str, orchestrator=None) -> None:
     """Load model at *path* into *backend*, emitting progress events.
 
@@ -132,25 +140,11 @@ async def _load_model(backend, path: str, orchestrator=None) -> None:
 
     try:
         await backend.load(path, _on_progress)
-        # Determine temperature based on model filename and set orchestrator param if present
-        try:
-            import os as _os
-            _basename = _os.path.basename(path).lower()
-            if "gemma" in _basename:
-                _chosen_temp = 1.0
-            elif "qwen" in _basename:
-                _chosen_temp = 0.7
-            else:
-                _chosen_temp = 1.0
-            if orchestrator is not None:
-                try:
-                    orchestrator._params.temperature = float(_chosen_temp)
-                    emit({"type": "system", "text": f"Set model temperature to {_chosen_temp}"})
-                    log.info("Set temperature to %s for model %s", _chosen_temp, path)
-                except Exception:
-                    log.exception("Failed to set orchestrator temperature")
-        except Exception:
-            log.exception("Failed to determine model temperature")
+        if orchestrator is not None:
+            temp = _model_temperature(path)
+            orchestrator._params.temperature = temp
+            emit({"type": "system", "text": f"Set model temperature to {temp}"})
+            log.info("Set temperature to %s for model %s", temp, path)
 
         emit({"type": "model_progress", "stage": "ready", "pct": 100})
         try:
@@ -313,9 +307,7 @@ async def main() -> None:
     registry.register(TaskOutputTool())
 
     # ── Orchestrator ──────────────────────────────────────────────────────────
-    system_prompt = build_system_prompt(
-        working_directory=working_directory,
-    )
+    system_prompt = build_system_prompt()
     orchestrator = Orchestrator(
         backend=backend,
         registry=registry,
@@ -331,26 +323,10 @@ async def main() -> None:
         network_enabled=network_enabled,
     )
 
-    # If a model was already loaded before the orchestrator existed (startup),
-    # set the orchestrator's temperature according to the model filename.
-    try:
-        if backend.is_loaded() and model_path:
-            import os as _os
-            _basename = _os.path.basename(model_path).lower()
-            if "gemma" in _basename:
-                _chosen_temp = 1.0
-            elif "qwen" in _basename:
-                _chosen_temp = 0.7
-            else:
-                _chosen_temp = 1.0
-            try:
-                orchestrator._params.temperature = float(_chosen_temp)
-                emit({"type": "system", "text": f"Set model temperature to {_chosen_temp}"})
-                log.info("Set temperature to %s for model %s", _chosen_temp, model_path)
-            except Exception:
-                log.exception("Failed to set orchestrator temperature at startup")
-    except Exception:
-        log.exception("Error while setting startup model temperature")
+    # If a model was pre-loaded via CYBERPAW_MODEL_PATH before the orchestrator
+    # existed, apply the temperature now (load_model path handles the normal case).
+    if backend.is_loaded() and model_path:
+        orchestrator._params.temperature = _model_temperature(model_path)
 
     emit({"type": "status", "phase": "idle"})
 

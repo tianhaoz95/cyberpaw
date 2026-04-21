@@ -4,11 +4,12 @@
  */
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { AgentPhase, ModelStatus } from "../hooks/useAgent";
+import type { AgentPhase, GenerationStats, ModelStatus } from "../hooks/useAgent";
 
 interface Props {
   agentPhase: AgentPhase;
   modelStatus: ModelStatus;
+  generationStats: GenerationStats;
   workingDirectory?: string;
   onOpenFolder: () => void;
   onNewSession: () => void;
@@ -49,6 +50,7 @@ function formatMb(n: number) {
 export default function MenuBar({
   agentPhase,
   modelStatus,
+  generationStats,
   workingDirectory,
   onOpenFolder,
   onNewSession,
@@ -196,6 +198,33 @@ export default function MenuBar({
           <span>{modelStatus.vramUsedMb > 0 ? formatMb(modelStatus.vramUsedMb) : "..."}</span>
         </span>
       )}
+
+      {/* Token generation stats badge */}
+      <span
+        title={
+          generationStats.totalTokens > 0
+            ? `Tokens generated this session: ${generationStats.totalTokens}\nLast generation speed: ${generationStats.tokensPerSec} tok/s`
+            : "No tokens generated yet"
+        }
+        style={{
+          fontSize: 11,
+          background: "#000a0a",
+          color: generationStats.totalTokens > 0 ? "#44ddcc" : "#444444",
+          border: `1px solid ${generationStats.totalTokens > 0 ? "#44ddcc44" : "#333333"}`,
+          borderRadius: 10,
+          padding: "1px 8px",
+          fontFamily: "monospace",
+          cursor: "default",
+          marginLeft: 8,
+          display: "flex",
+          gap: 6,
+        }}
+      >
+        <span style={{ opacity: 0.8 }}>tok:</span>
+        <span>{generationStats.totalTokens > 0 ? generationStats.totalTokens : "—"}</span>
+        <span style={{ color: generationStats.totalTokens > 0 ? "#44ddcc44" : "#333333" }}>|</span>
+        <span>{generationStats.tokensPerSec > 0 ? `${generationStats.tokensPerSec} tok/s` : "—"}</span>
+      </span>
 
       <MenuButton onClick={onOpenSettings} title="Settings">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ verticalAlign: "middle" }}>

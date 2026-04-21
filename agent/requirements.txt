@@ -15,6 +15,9 @@
 # ── Memory probing (optional but recommended for auto backend selection) ───────
 psutil>=5.9
 
+# ── Prompt template rendering ─────────────────────────────────────────────────
+jinja2>=3.1
+
 # ── Web / Network tools ───────────────────────────────────────────────────────
 httpx>=0.25.0
 playwright>=1.40.0

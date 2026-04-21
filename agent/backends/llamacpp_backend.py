@@ -163,6 +163,58 @@ class LlamaCppBackend(LLMBackend):
                 break
             yield token
 
+    def count_tokens(self, text: str) -> int:
+        """Exact token count using the model's tokenizer."""
+        if self._llm is None:
+            return len(text) // 4
+        tokens = self._llm.tokenize(text.encode())
+        return len(tokens)
+
+    def chat_template(self) -> str | None:
+        """Return the Jinja2 chat template embedded in the GGUF metadata."""
+        if self._llm is None:
+            return None
+        return self._llm.metadata.get("tokenizer.chat_template")
+
+    def eos_strings(self) -> list[str]:
+        """Derive EOS stop strings from the GGUF vocabulary metadata."""
+        if self._llm is None:
+            return []
+        meta = self._llm.metadata
+        eos_id_str = meta.get("tokenizer.ggml.eos_token_id")
+        if eos_id_str is None:
+            return []
+        try:
+            eos_id = int(eos_id_str)
+            raw_tokens = meta.get("tokenizer.ggml.tokens")
+            if isinstance(raw_tokens, str):
+                import json as _json
+                raw_tokens = _json.loads(raw_tokens)
+            if isinstance(raw_tokens, list) and eos_id < len(raw_tokens):
+                return [raw_tokens[eos_id]]
+        except (ValueError, IndexError, TypeError, Exception):
+            log.debug("Could not derive EOS string from GGUF metadata")
+        return []
+
+    async def prime_cache(self, system_prefix: str) -> None:
+        """Warm the KV cache with the stable system prompt prefix."""
+        if self._llm is None:
+            return
+        
+        # This evaluates the system_prefix and stores it in the KV cache
+        # so that subsequent calls starting with this prefix are faster.
+        # We use eval() directly to fill the cache without generating tokens.
+        def _prime():
+            try:
+                tokens = self._llm.tokenize(system_prefix.encode())
+                # eval() expects a sequence of token IDs
+                self._llm.eval(tokens)
+                log.info("llama.cpp KV cache primed with %d tokens", len(tokens))
+            except Exception as e:
+                log.warning("Failed to prime llama.cpp KV cache: %s", e)
+
+        await asyncio.to_thread(_prime)
+
     # ── Diagnostics ───────────────────────────────────────────────────────────
 
     def context_size(self) -> int:
