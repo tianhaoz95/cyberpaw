@@ -1,6 +1,9 @@
 mod commands;
 mod sidecar;
 
+use tauri::Manager;
+
+const APP_ICON: tauri::image::Image<'_> = tauri::include_image!("icons/icon.png");
 
 pub fn run() {
     tauri::Builder::default()
@@ -11,6 +14,9 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             sidecar::spawn_sidecar(app_handle)?;
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_icon(APP_ICON.clone());
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

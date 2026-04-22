@@ -1,4 +1,6 @@
-:root {
+/* Force dark theme always — override both :root and light variant */
+:root,
+:root[data-theme='light'] {
   --sl-color-accent-low: #2d0033;
   --sl-color-accent: #cc00ff;
   --sl-color-accent-high: #ff2d98;
@@ -10,4 +12,10 @@
   --sl-color-gray-5: #2a0040;
   --sl-color-gray-6: #150020;
   --sl-color-black: #0a000f;
+  color-scheme: dark;
+}
+
+/* Hide the light/dark theme toggle button */
+starlight-theme-select {
+  display: none !important;
 }

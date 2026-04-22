@@ -11,7 +11,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 export interface AppConfig {
   working_directory: string;
@@ -56,12 +56,17 @@ export function useConfig() {
   // has the persisted model_path — no async gap for the auto-load effect.
   const [config, setConfig] = useState<AppConfig>(readLocalStorage);
 
+  // Keep a ref to the latest config so updateConfig never has a stale closure.
+  const configRef = useRef(config);
+  configRef.current = config;
+
   const updateConfig = useCallback((patch: Partial<AppConfig>) => {
-    const next: AppConfig = { ...config, ...patch };
+    const next: AppConfig = { ...configRef.current, ...patch };
     setConfig(next);
     writeLocalStorage(next);
     invoke("set_config", { config: next }).catch(() => {});
-  }, [config]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { config, updateConfig };
 }
