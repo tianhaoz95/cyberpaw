@@ -1,0 +1,154 @@
+name: Release macOS App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src-tauri/tauri.conf.json'
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    name: Check for version bump
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changed: ${{ steps.version.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # need previous commit to diff
+
+      - name: Detect version change
+        id: version
+        run: |
+          CURRENT=$(jq -r '.version' src-tauri/tauri.conf.json)
+          PREVIOUS=$(git show HEAD~1:src-tauri/tauri.conf.json 2>/dev/null \
+                     | jq -r '.version' 2>/dev/null || echo "")
+
+          echo "Current version:  $CURRENT"
+          echo "Previous version: $PREVIOUS"
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-macos:
+    name: Build macOS app (v${{ needs.check-version.outputs.version }})
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: macos-latest   # Apple Silicon runner (M1/M2)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Rust ──────────────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artefacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # ── Node ──────────────────────────────────────────────────────────────
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # ── Python sidecar ────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install psutil jinja2 diff-match-patch httpx pyinstaller
+          # llama-cpp-python with Metal acceleration for Apple Silicon
+          CMAKE_ARGS="-DLLAMA_METAL=on" \
+            pip install llama-cpp-python --no-cache-dir
+
+      - name: Build Python sidecar
+        run: ./scripts/build-sidecar.sh
+
+      # ── Tauri app ─────────────────────────────────────────────────────────
+      - name: Build Tauri app (release)
+        run: npm run tauri build
+        env:
+          # Disable code signing — distributing as unsigned for now.
+          # Set APPLE_SIGNING_IDENTITY, APPLE_CERTIFICATE, etc. to enable.
+          TAURI_SIGNING_PRIVATE_KEY: ""
+
+      # ── Collect artefacts ─────────────────────────────────────────────────
+      - name: Locate build artefacts
+        id: artefacts
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+
+          DMG=$(find src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
+          APP_DIR=$(find src-tauri/target/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
+
+          echo "dmg=$DMG"       >> "$GITHUB_OUTPUT"
+          echo "app_dir=$APP_DIR" >> "$GITHUB_OUTPUT"
+
+          # Create a zipped .app for users who prefer drag-to-Applications
+          if [ -d "$APP_DIR" ]; then
+            ZIP="src-tauri/target/release/bundle/macos/CyberPaw-${VERSION}-macos.zip"
+            ditto -c -k --keepParent "$APP_DIR" "$ZIP"
+            echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload DMG artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyberPaw-dmg
+          path: ${{ steps.artefacts.outputs.dmg }}
+          retention-days: 7
+
+      - name: Upload ZIP artefact
+        if: steps.artefacts.outputs.zip != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyberPaw-zip
+          path: ${{ steps.artefacts.outputs.zip }}
+          retention-days: 7
+
+      # ── GitHub Release ────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: CyberPaw v${{ needs.check-version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            ${{ steps.artefacts.outputs.dmg }}
+            ${{ steps.artefacts.outputs.zip }}
+          body: |
+            ## CyberPaw v${{ needs.check-version.outputs.version }}
+
+            ### Installation
+            1. Download `CyberPaw_${{ needs.check-version.outputs.version }}_aarch64.dmg`
+            2. Open the DMG and drag **CyberPaw.app** to your Applications folder
+            3. Right-click → Open on first launch (app is unsigned)
+
+            > **Note:** This build is unsigned. macOS will show a security warning
+            > on first launch — right-click the app and choose **Open** to bypass it.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
