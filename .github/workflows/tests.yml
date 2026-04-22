@@ -1,0 +1,68 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Agent unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+
+      - name: Install test dependencies
+        working-directory: agent
+        run: |
+          pip install --upgrade pip
+          # Install only the deps needed by the unit tests (no llama-cpp-python,
+          # no playwright — those require native libs or a browser download)
+          pip install \
+            psutil \
+            jinja2 \
+            diff-match-patch \
+            httpx \
+            pytest \
+            pytest-cov
+
+      - name: Run unit tests
+        working-directory: agent
+        run: |
+          python -m pytest tests/ \
+            -v \
+            --tb=short \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            -p no:cacheprovider
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: agent/coverage.xml
+          retention-days: 14
