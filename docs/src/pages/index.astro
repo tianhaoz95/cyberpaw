@@ -1,0 +1,688 @@
+---
+const base = import.meta.env.BASE_URL;
+const docsUrl = `${base}/intro`;
+const installUrl = `${base}/getting-started/installation`;
+const githubUrl = 'https://github.com/tianhaoz95/cyberpaw';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberPaw — Local AI Coding Agent</title>
+  <meta name="description" content="A fully local, offline-first coding agent desktop app. No API keys. No cloud. Your code stays on your machine." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink:   #ff2d98;
+      --purple: #cc00ff;
+      --cyan:   #00e5ff;
+      --bg:     #06000a;
+      --bg2:    #0d000d;
+      --bg3:    #130013;
+      --border: #ff2d9822;
+      --text:   #f0e6ff;
+      --muted:  #8060a0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 60px;
+      background: #06000acc;
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--pink);
+      text-shadow: 0 0 16px #ff2d9866;
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-btn {
+      background: var(--pink);
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 18px;
+      border-radius: 6px;
+      transition: opacity 0.15s, box-shadow 0.15s;
+      box-shadow: 0 0 12px #ff2d9844;
+    }
+    .nav-btn:hover { opacity: 0.85; box-shadow: 0 0 20px #ff2d9888; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 700px;
+      background: radial-gradient(ellipse, #cc00ff18 0%, #ff2d9808 50%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 20px;
+      padding: 4px 14px;
+      border: 1px solid #cc00ff44;
+      border-radius: 100px;
+      background: #cc00ff11;
+    }
+    .hero h1 {
+      font-size: clamp(48px, 8vw, 88px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--muted);
+      max-width: 560px;
+      margin-bottom: 44px;
+      line-height: 1.7;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 72px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 8px;
+      box-shadow: 0 0 24px #ff2d9844;
+      transition: opacity 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.9; box-shadow: 0 0 40px #ff2d9866; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 13px 32px;
+      border-radius: 8px;
+      border: 1px solid #ff2d9844;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--pink); background: #ff2d9811; transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 13px 28px;
+      border-radius: 8px;
+      border: 1px solid #ffffff18;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: #ffffff44; }
+
+    /* ── Terminal demo ── */
+    .terminal-demo {
+      width: 100%;
+      max-width: 680px;
+      background: #0a000f;
+      border: 1px solid #ff2d9833;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 60px #ff2d9820, 0 40px 80px #00000060;
+      text-align: left;
+    }
+    .term-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #130013;
+      border-bottom: 1px solid #ff2d9822;
+    }
+    .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-dot-r { background: #ff5f57; }
+    .term-dot-y { background: #febc2e; }
+    .term-dot-g { background: #28c840; }
+    .term-title {
+      flex: 1;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .term-body {
+      padding: 20px 20px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .t-dim  { color: #555; }
+    .t-wd   { color: #888; }
+    .t-pink { color: var(--pink); }
+    .t-cyan { color: var(--cyan); }
+    .t-grn  { color: #00ff99; }
+    .t-wht  { color: #e0e0e0; }
+    .t-pur  { color: #cc88ff; }
+    .t-yel  { color: #ffd700; }
+
+    /* ── Section shared ── */
+    section { padding: 100px 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* ── Features ── */
+    #features { background: var(--bg); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 56px;
+    }
+    .feature-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      border-color: #ff2d9855;
+      box-shadow: 0 0 30px #ff2d9814;
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+    .feature-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .feature-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── How it works ── */
+    #how { background: var(--bg2); }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0;
+      margin-top: 56px;
+      position: relative;
+    }
+    .step {
+      padding: 32px 28px;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      right: -10px;
+      top: 44px;
+      color: #ff2d9844;
+      font-size: 20px;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--pink);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+    .step-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .step-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── Privacy ── */
+    #privacy { background: var(--bg); }
+    .privacy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 56px;
+      align-items: center;
+    }
+    @media (max-width: 700px) { .privacy-grid { grid-template-columns: 1fr; } }
+    .privacy-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+    .privacy-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .privacy-check {
+      color: var(--pink);
+      font-size: 18px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    .privacy-text strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .privacy-text span { font-size: 13px; color: var(--muted); }
+    .privacy-code {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.9;
+      color: #aaa;
+    }
+    .privacy-code .c-pink { color: var(--pink); }
+    .privacy-code .c-grn  { color: #00ff99; }
+    .privacy-code .c-dim  { color: #444; }
+
+    /* ── Models ── */
+    #models { background: var(--bg2); }
+    .models-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 56px;
+    }
+    .model-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      position: relative;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .model-card:hover { border-color: #ff2d9855; box-shadow: 0 0 30px #ff2d9814; }
+    .model-badge {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: #ff2d9822;
+      border: 1px solid var(--pink);
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--pink);
+      padding: 2px 10px;
+      letter-spacing: 0.05em;
+    }
+    .model-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .model-desc { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+    .model-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+    .model-stat {
+      background: #ffffff0a;
+      border: 1px solid #ffffff14;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    /* ── CTA band ── */
+    #cta {
+      background: linear-gradient(135deg, #1a0020, #0d000d);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+    #cta .section-title { max-width: 640px; margin: 0 auto 16px; }
+    #cta .section-sub { margin: 0 auto 40px; }
+    .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; gap: 20px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href={base + '/'} class="nav-logo">CyberPaw</a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#models" class="nav-link">Models</a>
+    <a href={docsUrl} class="nav-link">Docs</a>
+    <a href={githubUrl} class="nav-link" target="_blank" rel="noopener">GitHub</a>
+    <a href={installUrl} class="nav-btn">Get Started</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Offline-first · No API keys · Open source</div>
+  <h1>Your code stays<br/><span class="accent">on your machine.</span></h1>
+  <p class="hero-sub">
+    CyberPaw is a desktop coding agent powered by local LLMs. Read files, write code,
+    run tests — all without sending a single byte to the cloud.
+  </p>
+  <div class="hero-cta">
+    <a href={installUrl} class="btn-primary">Download &amp; Install</a>
+    <a href={docsUrl} class="btn-secondary">Developer Guide →</a>
+    <a href={githubUrl} class="btn-ghost" target="_blank" rel="noopener">★ GitHub</a>
+  </div>
+
+  <!-- Terminal demo -->
+  <div class="terminal-demo">
+    <div class="term-bar">
+      <div class="term-dot term-dot-r"></div>
+      <div class="term-dot term-dot-y"></div>
+      <div class="term-dot term-dot-g"></div>
+      <div class="term-title">CyberPaw — ~/projects/myapp</div>
+    </div>
+    <div class="term-body">
+      <div><span class="t-dim">Working directory: </span><span class="t-wd">~/projects/myapp</span></div>
+      <div><span class="t-pink">⠿</span> <span class="t-wht">Loading gemma-4-E4B-it-Q4_K_M.gguf…</span></div>
+      <div><span class="t-pink">Model ready.</span></div>
+      <br/>
+      <div><span class="t-pink">❯</span> <span class="t-wht">add error handling to the login function in src/auth.py</span></div>
+      <br/>
+      <div><span class="t-cyan">▸ Read</span> <span class="t-dim">src/auth.py</span></div>
+      <div><span class="t-cyan">▸ Edit</span> <span class="t-dim">src/auth.py — wrapped auth call in try/except</span></div>
+      <div><span class="t-cyan">▸ Bash</span> <span class="t-dim">pytest tests/test_auth.py</span></div>
+      <br/>
+      <div><span class="t-grn">✓</span> <span class="t-wht">Done. Added try/except around the JWT decode call,</span></div>
+      <div><span class="t-wht">  returns a 401 on </span><span class="t-pur">InvalidTokenError</span><span class="t-wht">. All 12 tests pass.</span></div>
+      <br/>
+      <div><span class="t-pink">❯</span> <span class="t-dim">_</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Why CyberPaw</div>
+    <h2 class="section-title">Everything a coding agent needs,<br/>nothing it doesn't.</h2>
+    <p class="section-sub">Built for developers who want full capability without giving up privacy or control.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Fully Offline</div>
+        <div class="feature-desc">Runs entirely on your hardware using llama-cpp-python. No internet required after setup. Your code never leaves your machine.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛠️</div>
+        <div class="feature-title">20 Built-in Tools</div>
+        <div class="feature-desc">Read, write, edit files. Run shell commands. Search codebases with grep and glob. Execute Python in a persistent REPL. Browse the web (opt-in).</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <div class="feature-title">Native Desktop App</div>
+        <div class="feature-desc">Built with Tauri 2 — a native macOS/Windows/Linux window. Not Electron. Fast startup, small footprint, proper OS integration.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-title">Multi-Agent</div>
+        <div class="feature-desc">Spawn sub-agents for focused sub-tasks. Up to 3 levels of nesting. Each sub-agent has its own conversation context and tool access.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Metal Accelerated</div>
+        <div class="feature-desc">On Apple Silicon, llama-cpp-python runs on the GPU via Metal. Get 30–50 tokens/sec on an M2 Pro with the E4B model.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧩</div>
+        <div class="feature-title">Extensible</div>
+        <div class="feature-desc">Add a new tool in one Python file. The tool registry auto-generates the schema injected into the system prompt — no boilerplate.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Three layers, one pipe.</h2>
+    <p class="section-sub">CyberPaw is a Tauri app wrapping a React terminal UI that talks to a Python agent over NDJSON on stdin/stdout.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01 — FRONTEND</div>
+        <div class="step-title">React + xterm.js</div>
+        <div class="step-desc">A terminal UI in a Tauri WebView. Handles input, renders streamed tokens, shows tool call events and permission dialogs.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02 — BRIDGE</div>
+        <div class="step-title">Tauri (Rust)</div>
+        <div class="step-desc">Spawns the Python sidecar, bridges WebView ↔ sidecar via NDJSON on stdin/stdout. Persists config. Manages the window.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03 — AGENT</div>
+        <div class="step-title">Python + llama.cpp</div>
+        <div class="step-desc">Asyncio event loop running the agent harness. Streams tokens from the local model, parses tool calls, executes tools, loops.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Privacy -->
+<section id="privacy">
+  <div class="container">
+    <div class="privacy-grid">
+      <div>
+        <div class="section-label">Privacy by design</div>
+        <h2 class="section-title">Zero data leaves<br/>your machine.</h2>
+        <p class="section-sub" style="margin-bottom: 36px;">
+          Every inference call goes to a process on localhost. No telemetry, no cloud sync, no API keys to rotate.
+        </p>
+        <ul class="privacy-list">
+          <li class="privacy-item">
+            <span class="privacy-check">✦</span>
+            <div class="privacy-text">
+              <strong>Local inference</strong>
+              <span>llama-cpp-python runs the model in-process. No network calls during generation.</span>
+            </div>
+          </li>
+          <li class="privacy-item">
+            <span class="privacy-check">✦</span>
+            <div class="privacy-text">
+              <strong>No telemetry</strong>
+              <span>CyberPaw collects nothing. No crash reports, no usage analytics, no account required.</span>
+            </div>
+          </li>
+          <li class="privacy-item">
+            <span class="privacy-check">✦</span>
+            <div class="privacy-text">
+              <strong>Opt-in network access</strong>
+              <span>Web tools (WebFetch, WebSearch, Playwright) are disabled by default and require explicit opt-in per session.</span>
+            </div>
+          </li>
+          <li class="privacy-item">
+            <span class="privacy-check">✦</span>
+            <div class="privacy-text">
+              <strong>Permission system</strong>
+              <span>Every file write and shell command can require your approval before executing.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="privacy-code">
+        <div><span class="c-dim"># All traffic stays on localhost</span></div>
+        <div>&nbsp;</div>
+        <div><span class="c-pink">OUTBOUND_REQUESTS</span> = <span class="c-grn">0</span></div>
+        <div><span class="c-pink">API_KEYS_REQUIRED</span> = <span class="c-grn">0</span></div>
+        <div><span class="c-pink">TELEMETRY_EVENTS</span>  = <span class="c-grn">0</span></div>
+        <div><span class="c-pink">CLOUD_SYNC</span>        = <span class="c-grn">False</span></div>
+        <div>&nbsp;</div>
+        <div><span class="c-dim"># Inference path</span></div>
+        <div>user_prompt</div>
+        <div>  → tauri_ipc</div>
+        <div>  → python_sidecar</div>
+        <div>  → <span class="c-pink">llama_cpp</span> <span class="c-dim">(localhost)</span></div>
+        <div>  → streamed_tokens</div>
+        <div>  → terminal_ui</div>
+        <div>&nbsp;</div>
+        <div><span class="c-grn">✓ No external calls made</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Models -->
+<section id="models">
+  <div class="container">
+    <div class="section-label">Supported Models</div>
+    <h2 class="section-title">Download once, run forever.</h2>
+    <p class="section-sub">CyberPaw ships without model weights. Pick the one that fits your hardware. Download from the app — no manual steps.</p>
+    <div class="models-grid">
+      <div class="model-card">
+        <div class="model-badge">RECOMMENDED</div>
+        <div class="model-name">Gemma 4 E2B</div>
+        <div class="model-desc">Google's 2B MoE model. Fast responses, good code quality. Best choice for 8 GB RAM machines.</div>
+        <div class="model-stats">
+          <span class="model-stat">Q4_K_M</span>
+          <span class="model-stat">2.9 GB</span>
+          <span class="model-stat">8 GB RAM</span>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-name">Gemma 4 E4B</div>
+        <div class="model-desc">Google's 4B MoE model. Better reasoning and code quality. Recommended for 16 GB RAM machines.</div>
+        <div class="model-stats">
+          <span class="model-stat">Q4_K_M</span>
+          <span class="model-stat">4.6 GB</span>
+          <span class="model-stat">8+ GB RAM</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 24px; font-size: 13px; color: var(--muted);">
+      Models are saved to <code style="font-family: 'JetBrains Mono', monospace; color: var(--pink); font-size: 12px;">~/CyberPaw/models/</code>. The app detects already-downloaded models and shows a Load button — no re-downloading needed.
+    </p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="container">
+    <div class="section-label">Get started</div>
+    <h2 class="section-title">Your private coding agent is one command away.</h2>
+    <p class="section-sub">Run the setup script, download a model, and start coding — all offline.</p>
+    <div class="cta-buttons">
+      <a href={installUrl} class="btn-primary">Installation Guide</a>
+      <a href={docsUrl} class="btn-secondary">Developer Docs →</a>
+      <a href={githubUrl} class="btn-ghost" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
+    <a href={docsUrl}>Docs</a>
+    <a href={installUrl}>Install</a>
+    <a href={`${base}/architecture/overview`}>Architecture</a>
+    <a href={`${base}/tools/overview`}>Tools</a>
+    <a href={`${base}/contributing`}>Contributing</a>
+    <a href={githubUrl} target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <div>CyberPaw — open source, offline-first, yours.</div>
+</footer>
+
+</body>
+</html>
