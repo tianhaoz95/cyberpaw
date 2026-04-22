@@ -6,6 +6,11 @@ on:
     paths:
       - 'src-tauri/tauri.conf.json'
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even if version unchanged'
+        type: boolean
+        default: true
 
 permissions:
   contents: write   # required to create releases and upload assets
@@ -34,7 +39,10 @@ jobs:
           echo "Previous version: $PREVIOUS"
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
 
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
+          # Always build on workflow_dispatch (force_build=true by default)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$CURRENT" != "$PREVIOUS" ]; then
             echo "changed=true"  >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -94,7 +102,6 @@ jobs:
         run: npm run tauri build
         env:
           # Disable code signing — distributing as unsigned for now.
-          # Set APPLE_SIGNING_IDENTITY, APPLE_CERTIFICATE, etc. to enable.
           TAURI_SIGNING_PRIVATE_KEY: ""
 
       # ── Collect artefacts ─────────────────────────────────────────────────
@@ -106,8 +113,7 @@ jobs:
           DMG=$(find src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
           APP_DIR=$(find src-tauri/target/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
 
-          echo "dmg=$DMG"       >> "$GITHUB_OUTPUT"
-          echo "app_dir=$APP_DIR" >> "$GITHUB_OUTPUT"
+          echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
 
           # Create a zipped .app for users who prefer drag-to-Applications
           if [ -d "$APP_DIR" ]; then
@@ -132,26 +138,38 @@ jobs:
           retention-days: 7
 
       # ── GitHub Release ────────────────────────────────────────────────────
+      # Use gh CLI directly — avoids the generate-release-notes API call that
+      # triggers a 403 when the repo's default workflow permissions are "read".
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: CyberPaw v${{ needs.check-version.outputs.version }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            ${{ steps.artefacts.outputs.dmg }}
-            ${{ steps.artefacts.outputs.zip }}
-          body: |
-            ## CyberPaw v${{ needs.check-version.outputs.version }}
-
-            ### Installation
-            1. Download `CyberPaw_${{ needs.check-version.outputs.version }}_aarch64.dmg`
-            2. Open the DMG and drag **CyberPaw.app** to your Applications folder
-            3. Right-click → Open on first launch (app is unsigned)
-
-            > **Note:** This build is unsigned. macOS will show a security warning
-            > on first launch — right-click the app and choose **Open** to bypass it.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          TAG="v${VERSION}"
+          DMG="${{ steps.artefacts.outputs.dmg }}"
+          ZIP="${{ steps.artefacts.outputs.zip }}"
+
+          # Delete existing release/tag if present (idempotent re-runs)
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
+          git push --delete origin "$TAG" 2>/dev/null || true
+
+          # Build file list
+          FILES=()
+          [ -f "$DMG" ] && FILES+=("$DMG")
+          [ -f "$ZIP" ] && FILES+=("$ZIP")
+
+          NOTES="## CyberPaw v${VERSION}
+
+### Installation
+1. Download \`CyberPaw_${VERSION}_aarch64.dmg\`
+2. Open the DMG and drag **CyberPaw.app** to your Applications folder
+3. Right-click → Open on first launch (app is unsigned)
+
+> **Note:** This build is unsigned. macOS will show a security warning
+> on first launch — right-click the app and choose **Open** to bypass it."
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "CyberPaw v${VERSION}" \
+            --notes "$NOTES" \
+            "${FILES[@]}"
