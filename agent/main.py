@@ -371,6 +371,11 @@ async def main() -> None:
             if context_size == 0 or not msg.get("keep_ctx"):
                 context_size = calculate_context_size(_total_ram_gb(), model_path)
 
+            # Unload the current model before loading the new one so both
+            # models are never in memory at the same time.
+            if backend.is_loaded():
+                backend.unload()
+
             # Update backend with the freshly calculated context size
             old_backend = backend
             new_backend = select_backend(backend_kind, n_ctx=context_size, model_path=model_path)

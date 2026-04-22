@@ -120,6 +120,11 @@ class LlamaCppBackend(LLMBackend):
 
     def unload(self) -> None:
         self._llm = None
+        # Force the garbage collector to free the underlying C++ llama.cpp
+        # objects immediately rather than waiting for the next GC cycle.
+        # Without this, loading a new model would briefly hold both in RAM.
+        import gc
+        gc.collect()
         log.info("llama.cpp model unloaded")
 
     def reset_kv_cache(self) -> None:
