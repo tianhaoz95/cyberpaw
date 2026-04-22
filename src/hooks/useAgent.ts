@@ -204,6 +204,9 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
   const [loadProgress, setLoadProgress] = useState<{
     pct: number; backend: string; heartbeat?: boolean;
   } | null>(null);
+  // True while a load is in flight — prevents status poll responses from
+  // re-triggering the progress bar after loading completes.
+  const modelLoadingRef = useRef(false);
   const [downloadProgress, setDownloadProgress] =
     useState<DownloadProgress | null>(null);
   const [downloadedModelPath, setDownloadedModelPath] = useState<string | null>(null);
@@ -277,19 +280,21 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
         const backend = modelStatus.backend !== "unknown"
           ? modelStatus.backend
           : (msg.backend as string) ?? "model";
-        if (msg.stage === "loading") {
-          setLoadProgress({
-            pct: (msg.pct as number) ?? 0,
-            backend,
-            heartbeat: (msg.heartbeat as boolean) ?? false,
-          });
-        } else if (msg.stage === "ready") {
-          setLoadProgress({ pct: 100, backend });
-          // App.tsx handles the "Model ready." print to coordinate with the spinner.
-        }
+        setLoadProgress({
+          pct: (msg.pct as number) ?? 0,
+          backend,
+          heartbeat: (msg.heartbeat as boolean) ?? false,
+        });
       } else if (type === "model_status") {
+        const backend = (msg.backend as string) ?? "unknown";
+        if ((msg.loaded as boolean) && modelLoadingRef.current) {
+          // Only set pct=100 when a load was actually in flight — not for
+          // periodic status poll responses which also have loaded:true.
+          modelLoadingRef.current = false;
+          setLoadProgress({ pct: 100, backend });
+        }
         setModelStatus({
-          backend: (msg.backend as string) ?? "unknown",
+          backend,
           loaded: (msg.loaded as boolean) ?? false,
           vramUsedMb: (msg.vram_used_mb as number) ?? 0,
           modelSizeMb: (msg.model_size_mb as number) ?? 0,
@@ -423,10 +428,14 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
 
   const loadModel = useCallback(
     async (modelPath: string, backend?: string) => {
+      modelLoadingRef.current = true;
       await invoke("load_model", {
         modelPath,
         backend: backend ?? null,
-      }).catch((e) => write(`\r\n\x1b[31mLoad model failed: ${e}\x1b[0m\r\n`));
+      }).catch((e) => {
+        modelLoadingRef.current = false;
+        write(`\r\n\x1b[31mLoad model failed: ${e}\x1b[0m\r\n`);
+      });
     },
     [write]
   );

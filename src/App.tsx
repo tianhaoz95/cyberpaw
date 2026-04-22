@@ -36,17 +36,18 @@ export default function App() {
   const autoLoadedRef = useRef(false);
   const spinnerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Clear the spinner as soon as the model reports loaded.
+  // Clear the spinner as soon as the model finishes loading (pct hits 100).
+  // Watching loadProgress instead of modelStatus.loaded means this fires on
+  // every load, including swapping to a new model while one is already loaded.
   useEffect(() => {
-    if (modelStatus.loaded) {
+    if (loadProgress?.pct === 100) {
       if (spinnerTimerRef.current !== null) {
         clearInterval(spinnerTimerRef.current);
         spinnerTimerRef.current = null;
-        // \x1b[2K clears the line, \r moves to the start.
         writeTerminal("\x1b[2K\r\x1b[38;2;255;45;152mModel ready.\x1b[0m\r\n\x1b[38;2;255;45;152m❯\x1b[0m ");
       }
     }
-  }, [modelStatus.loaded, writeTerminal]);
+  }, [loadProgress, writeTerminal]);
   useEffect(() => {
     if (autoLoadedRef.current) return;
     autoLoadedRef.current = true;
@@ -133,6 +134,17 @@ export default function App() {
           onCheckInstalled={checkInstalledModels}
           onLoadModel={(path) => {
             updateConfig({ model_path: path });
+            const P = "\x1b[38;2;255;45;152m";
+            const R = "\x1b[0m";
+            const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+            let i = 0;
+            const modelName = path.split(/[/\\]/).pop();
+            writeTerminal(`\r\n${P}${frames[0]}${R} Loading ${modelName}…`);
+            if (spinnerTimerRef.current !== null) clearInterval(spinnerTimerRef.current);
+            spinnerTimerRef.current = setInterval(() => {
+              i = (i + 1) % frames.length;
+              writeTerminal(`\r${P}${frames[i]}${R} Loading ${modelName}…`);
+            }, 80);
             loadModel(path);
           }}
         />
