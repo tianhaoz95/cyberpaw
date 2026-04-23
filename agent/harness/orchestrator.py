@@ -557,12 +557,15 @@ class Orchestrator:
                 is_error = result.is_error
                 summary = result.summary
 
+            # Build a short output preview (last 5 non-empty lines) for the UI.
+            preview_lines = [l for l in result_content.splitlines() if l.strip()][-5:]
             self._emit({
                 "type": "tool_end",
                 "id": tu.id,
                 "tool": tu.name,
                 "summary": summary,
                 "is_error": is_error,
+                "output_preview": preview_lines,
             })
             self._emit({"type": "status", "phase": "thinking"})
 

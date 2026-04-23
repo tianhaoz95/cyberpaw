@@ -365,10 +365,17 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
         const tool = msg.tool as string;
         const isError = msg.is_error as boolean;
         const summary = (msg.summary as string) ?? "";
+        const outputPreview = (msg.output_preview as string[]) ?? [];
         const label = msg.agent_label ? `\x1b[2m[${msg.agent_label}]\x1b[0m ` : "";
         const { color } = formatToolStart(tool, {});
         const statusIcon = isError ? "\x1b[31m✗\x1b[0m" : "\x1b[32m✓\x1b[0m";
         const resultText = summary.length > 120 ? summary.slice(0, 120) + "…" : summary;
+        // Show last 5 lines of output for Bash so the user can see what happened.
+        if (tool === "Bash" && outputPreview.length > 0) {
+          const previewColor = isError ? "\x1b[38;2;255;100;100m" : "\x1b[2m";
+          const lines = outputPreview.map(l => `\x1b[2m│\x1b[0m ${previewColor}${l}\x1b[0m`).join("\r\n");
+          write(`${lines}\r\n`);
+        }
         write(`${label}${color}└\x1b[0m ${statusIcon} \x1b[2m${resultText}\x1b[0m\r\n`);
       } else if (type === "tool_ask") {
         setPendingPermission({
