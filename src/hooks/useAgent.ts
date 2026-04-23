@@ -292,6 +292,15 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
     quant: "Q4_K_M",
     requires_hf_token: false,
   },
+  {
+    id: "gemma-4-26b-q4km",
+    name: "Gemma 4 26B A4B (Q4_K_M)",
+    description: "26B MoE · 17 GB · Best quality · Needs 24+ GB RAM",
+    filename: "gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
+    size_gb: 17.0,
+    quant: "Q4_K_M",
+    requires_hf_token: false,
+  },
 ];
 
 export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").AppConfig>) => void) {

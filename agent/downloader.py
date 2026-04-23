@@ -65,6 +65,15 @@ MODEL_CATALOG: list[ModelEntry] = [
         size_gb=4.6,
         quant="Q4_K_M",
     ),
+    ModelEntry(
+        id="gemma-4-26b-q4km",
+        name="Gemma 4 26B A4B (Q4_K_M)",
+        description="26B MoE · 17 GB · Best quality · Needs 24+ GB RAM",
+        url="https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
+        filename="gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
+        size_gb=17.0,
+        quant="Q4_K_M",
+    ),
 ]
 
 
