@@ -131,12 +131,20 @@ jobs:
 
           APP_DIR=$(find src-tauri/target/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
 
-          # Re-create the DMG after signing (Tauri's DMG was built before signing)
+          # Re-create the DMG after signing with an Applications symlink so
+          # users get the standard "drag to Applications" install experience.
           DMG_DIR="src-tauri/target/release/bundle/dmg"
           DMG="${DMG_DIR}/CyberPaw_${VERSION}_aarch64.dmg"
           mkdir -p "$DMG_DIR"
-          hdiutil create -volname "CyberPaw" -srcfolder "$APP_DIR" \
+
+          # Stage the DMG contents in a temp folder
+          STAGE=$(mktemp -d)
+          cp -R "$APP_DIR" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+
+          hdiutil create -volname "CyberPaw" -srcfolder "$STAGE" \
             -ov -format UDZO "$DMG"
+          rm -rf "$STAGE"
 
           echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
 
