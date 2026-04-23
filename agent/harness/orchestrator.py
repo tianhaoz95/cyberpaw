@@ -215,22 +215,17 @@ class Orchestrator:
 
             self._emit({"type": "status", "phase": "thinking"})
 
-            # Compact if near context limit
+            # Compact if near context limit — drop old turns, insert summary
             if should_compact(
                 self._messages,
                 self._context_size,
                 count_tokens_fn=self._backend.count_tokens,
             ):
-                # Pass session_id and working_directory for disk persistence (Gap 2)
-                self._messages, n = compact(
-                    self._messages,
-                    session_id=self._session_id,
-                    working_directory=self._working_directory
-                )
+                self._messages, n = compact(self._messages)
                 if n:
                     self._emit({
                         "type": "system",
-                        "text": f"[compacted {n} tool results to save context]",
+                        "text": f"[context compacted: dropped {n} old messages, keeping recent turns]",
                     })
 
             # Render prompt and call the LLM
