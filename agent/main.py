@@ -103,23 +103,22 @@ def _model_temperature(path: str) -> float:
 
 
 async def _run_shell(command: str, cwd: str) -> None:
-    """Run a shell command and emit the output as a system message."""
+    """Run a shell command and stream output to the terminal."""
     try:
         proc = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
             cwd=cwd,
         )
-        stdout, stderr = await proc.communicate()
-        out = stdout.decode().strip()
-        err = stderr.decode().strip()
-        if out:
-            emit({"type": "system", "text": out})
-        if err:
-            emit({"type": "system", "text": f"Error: {err}"})
+        assert proc.stdout is not None
+        async for line in proc.stdout:
+            emit({"type": "shell_output", "text": line.decode(errors="replace")})
+        exit_code = await proc.wait()
+        emit({"type": "shell_done", "exit_code": exit_code})
     except Exception as e:
-        emit({"type": "error", "message": f"Shell error: {e}"})
+        emit({"type": "shell_output", "text": f"Shell error: {e}\n"})
+        emit({"type": "shell_done", "exit_code": 1})
 
 
 def _apply_config_patch(patch: dict, orchestrator: Orchestrator) -> None:
