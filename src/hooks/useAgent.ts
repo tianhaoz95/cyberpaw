@@ -273,6 +273,27 @@ export interface ModelCatalogEntry {
   requires_hf_token: boolean;
 }
 
+export const MODEL_CATALOG: ModelCatalogEntry[] = [
+  {
+    id: "gemma-4-e2b-q4km",
+    name: "Gemma 4 E2B (Q4_K_M) — Recommended",
+    description: "2B MoE · 2.9 GB · Fastest · Good for 8 GB RAM machines",
+    filename: "gemma-4-E2B-it-Q4_K_M.gguf",
+    size_gb: 2.9,
+    quant: "Q4_K_M",
+    requires_hf_token: false,
+  },
+  {
+    id: "gemma-4-e4b-q4km",
+    name: "Gemma 4 E4B (Q4_K_M)",
+    description: "4B MoE · 4.6 GB · Better quality · Needs 8+ GB RAM",
+    filename: "gemma-4-E4B-it-Q4_K_M.gguf",
+    size_gb: 4.6,
+    quant: "Q4_K_M",
+    requires_hf_token: false,
+  },
+];
+
 export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").AppConfig>) => void) {
   const [agentPhase, setAgentPhase] = useState<AgentPhase>("idle");
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
@@ -293,7 +314,6 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
   const [downloadProgress, setDownloadProgress] =
     useState<DownloadProgress | null>(null);
   const [downloadedModelPath, setDownloadedModelPath] = useState<string | null>(null);
-  const [modelCatalog, setModelCatalog] = useState<ModelCatalogEntry[]>([]);
   const [generationStats, setGenerationStats] = useState<GenerationStats>({
     totalTokens: 0,
     tokensPerSec: 0,
@@ -420,8 +440,6 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
           write(`\r\n\x1b[31m[exit ${code}]\x1b[0m\r\n`);
         }
         write("\r\n\x1b[32m❯\x1b[0m ");
-      } else if (type === "download_catalog") {
-        setModelCatalog((msg.models as ModelCatalogEntry[]) ?? []);
       } else if (type === "download_progress") {
         setDownloadProgress({
           modelId: msg.model_id as string,
@@ -534,10 +552,6 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
     [write]
   );
 
-  const fetchCatalog = useCallback(async () => {
-    await invoke("get_download_catalog").catch(() => {});
-  }, []);
-
   const startDownload = useCallback(
     async (modelId: string, destDir?: string, hfToken?: string) => {
       setDownloadedModelPath(null);
@@ -577,13 +591,11 @@ export function useAgent(onConfigUpdate?: (patch: Partial<import("./useConfig").
     // Model loading
     loadModel,
     // Download
-    fetchCatalog,
     startDownload,
     cancelDownload,
     installBrowser,
     downloadProgress,
     downloadedModelPath,
-    modelCatalog,
     checkInstalledModels: async (dir: string): Promise<Set<string>> => {
       try {
         const { readDir } = await import("@tauri-apps/plugin-fs");

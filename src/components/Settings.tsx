@@ -16,7 +16,6 @@ interface Props {
   modelCatalog: ModelCatalogEntry[];
   downloadProgress: DownloadProgress | null;
   downloadedModelPath: string | null;
-  onFetchCatalog: () => void;
   onStartDownload: (modelId: string, destDir?: string, hfToken?: string) => void;
   onCancelDownload: () => void;
   onLoadModel: (modelPath: string) => void;
@@ -30,7 +29,6 @@ export default function Settings({
   modelCatalog,
   downloadProgress,
   downloadedModelPath,
-  onFetchCatalog,
   onStartDownload,
   onCancelDownload,
   onLoadModel,
@@ -120,7 +118,6 @@ export default function Settings({
           catalog={modelCatalog}
           progress={downloadProgress}
           downloadedPath={downloadedModelPath}
-          onFetchCatalog={onFetchCatalog}
           onStart={onStartDownload}
           onCancel={onCancelDownload}
           onCheckInstalled={onCheckInstalled}

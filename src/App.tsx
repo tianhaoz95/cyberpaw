@@ -4,7 +4,7 @@ import Terminal from "./components/Terminal";
 import Settings from "./components/Settings";
 import PermissionDialog from "./components/PermissionDialog";
 import ModelLoadProgress from "./components/ModelLoadProgress";
-import { useAgent } from "./hooks/useAgent";
+import { useAgent, MODEL_CATALOG } from "./hooks/useAgent";
 import { useConfig } from "./hooks/useConfig";
 
 export default function App() {
@@ -24,12 +24,10 @@ export default function App() {
     writeTerminal,
     loadModel,
     loadProgress,
-    fetchCatalog,
     startDownload,
     cancelDownload,
     downloadProgress,
     downloadedModelPath,
-    modelCatalog,
     checkInstalledModels,
   } = useAgent(updateConfig);
 
@@ -125,10 +123,9 @@ export default function App() {
             setSettingsOpen(false);
           }}
           onClose={() => setSettingsOpen(false)}
-          modelCatalog={modelCatalog}
+          modelCatalog={MODEL_CATALOG}
           downloadProgress={downloadProgress}
           downloadedModelPath={downloadedModelPath}
-          onFetchCatalog={fetchCatalog}
           onStartDownload={startDownload}
           onCancelDownload={cancelDownload}
           onCheckInstalled={checkInstalledModels}

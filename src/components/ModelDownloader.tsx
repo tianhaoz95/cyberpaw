@@ -12,7 +12,6 @@ interface Props {
   catalog: ModelCatalogEntry[];
   progress: DownloadProgress | null;
   downloadedPath: string | null;
-  onFetchCatalog: () => void;
   onStart: (modelId: string, destDir?: string, hfToken?: string) => void;
   onCancel: () => void;
   onUseModel: (path: string) => void;
@@ -23,7 +22,6 @@ export default function ModelDownloader({
   catalog,
   progress,
   downloadedPath,
-  onFetchCatalog,
   onStart,
   onCancel,
   onUseModel,
@@ -35,10 +33,6 @@ export default function ModelDownloader({
   const [showToken, setShowToken] = useState(false);
   const [installedFilenames, setInstalledFilenames] = useState<Set<string>>(new Set());
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (catalog.length === 0) onFetchCatalog();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (catalog.length > 0 && !selected) setSelected(catalog[0].id);
@@ -103,15 +97,7 @@ export default function ModelDownloader({
         Models
       </div>
 
-      {catalog.length === 0 ? (
-        <div style={{ color: "#ff2d98", fontSize: 12 }}>
-          Loading catalog…{" "}
-          <button onClick={onFetchCatalog} style={linkBtnStyle}>
-            retry
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {catalog.map((m) => {
             const installed = installedFilenames.has(m.filename);
             const isSelected = selected === m.id;
@@ -175,7 +161,6 @@ export default function ModelDownloader({
             );
           })}
         </div>
-      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <label style={{ color: "#ffffff", fontSize: 11 }}>
@@ -364,12 +349,3 @@ const dangerBtnStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const linkBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "#cc00ff",
-  fontSize: 12,
-  cursor: "pointer",
-  padding: 0,
-  textDecoration: "underline",
-};
